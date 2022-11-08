@@ -1,0 +1,888 @@
+
+Conversation opened. 1 read message.
+
+Skip to content
+Using Gmail with screen readers
+vio upgrade 
+2 of 3
+Mur
+Inbox
+
+Murthy Sarva <sarva777@gmail.com>
+Tue, Jul 20, 2021, 5:13 PM
+to me
+
+﻿
+Removing adapter from etherchannel without stopping etherchannel: 
+
+smitty etherchannel -> Delete Main/Backup Adapter
+
+/usr/lib/methods/ethchan_config -d <etherchannel physical device> <physical device>
+
+/usr/lib/methods/ethchan_config -d ent4 ent0
+
+ 
+
+Adding adapter to etherchannel:
+
+(make sure no ip is configured, if needed put to detach state)
+
+smitty etherchannel -> Add Main/Backup Adapter
+
+/usr/lib/methods/ethchan_config -a -b <etherchannel physical device> <physical device>         <--adding as backup adapter
+
+/usr/lib/methods/ethchan_config -a <etherchannel physical device> <physical device>            <--adding as primary adapter
+
+/usr/lib/methods/ethchan_config -a ent4 ent0
+
+(For me once, only command line worked, when smitty has been used for removing, it always said: resource is busy...) 
+
+ 
+
+ 
+
+smitty chgethch
+
+ 
+
+Then select the Etherchannel device you want to modify and then select the backup adapter you want to take out of the etherchannel in the field Delete Backup Adapter.
+
+ 
+
+Testing adapter failover:
+
+ 
+
+Etherchannel: ent2
+
+Primary Adapter: ent0 (connected on VLAN with VIOS1)
+
+Backup Adapter: ent1 (connected on VLAN with VIOS2)
+
+ 
+
+(IOCTL error message during creation of an etherchannel can be ignored)
+
+ 
+
+1. check active channel:
+
+    entstat -d ent2| grep Active                    <--Active channel: primary channel
+
+ 
+
+2. unplug cable from primary channel or testing it with command:
+
+    /usr/lib/methods/ethchan_config -f ent2         <--it will do a failover
+
+ 
+
+3. checking:
+
+    entstat -d ent2 | grep Active                   <--Active channel: backup adapter
+
+    errpt | head                                    <--ETHERCHANNEL FAILOVER
+
+ 
+
+4. switch back:   
+
+    /usr/lib/methods/ethchan_config -f ent2         <--it will do a switch again
+
+ 
+
+5. checking:
+
+    entstat -d ent2 | grep Active                   <--Active channel: primary channel
+
+    errpt | head                                    <--ETHERCHANNEL RECOVERY 
+
+ 
+
+                                                                                                                                                
+
+ 
+
+ 
+
+ 
+
+VIO Server Remediation (Upgrade) Runbook   for frame                                                                                                                                    
+
+Task ID User      Task Description             Duration  (Hours)            Resources               Start Date           Start Time          End Date            End Time               Resources           Notes 
+
+                             Current VIOS Level: VIOS 2.2.0.11-FP-24 SP-01                                                                                                         
+
+                             Target VIOS Level: 2.2.3.4    (am2p750d2cvio1 (10.97.8.31) & am2p750d2cvio2 (10.97.8.33))                                                                                                                   
+
+                                                                                                                                                
+
+                                                                                                                                                
+
+                             Preparation Tasks                         AIG                                                                                 
+
+                             Build check list of firmware level, VIOS level, HMC L.I.C. level 10.97.203.12/13    2.00                                                                                             
+
+              padmin $ ioslevel                                                                                                                 
+
+              root       # lsmcode                                                                                                               
+
+              hscroot # lshmc -v                                                                                                                
+
+                             Determine  microcode levels of HBA and Network adapters              1.00                                                                                             
+
+              root       # lscfg -El fcsX; lscfg -El entX                                                                                                             
+
+                             Determine AIX  levels  of guest lpars       1.00                                                                                             
+
+              root       # oslevel -r                                                                                                              
+
+                             Download update software and drivers to NIM/FTP server              2.00                                                                                             
+
+                             Setup destination directory for VIOS backups on NIM Server   1.00                                                                                             
+
+              root       # mkdir -p NIM_server:/viosbkp/HOSTNAME                                                                                                           
+
+              root       smitty nim                                                                                                               
+
+                             Create VIOS SPOT on NIM Server                                                                                                                  
+
+              root       smitty nim                                                                                                               
+
+                             Create and store mksysb, lsmap outputs & VIOS profile backups on NIM server  4.00       VICOM                                                                         
+
+              root       nim - Create mksysb of VIOS Server                                                                                                              
+
+              padmin $ viosbr -backup -file /home/padmin/vio_backup_file                                                                                                          
+
+              padmin scp /home/padmin/vio_backup_file  NIMServer:/sysbackup/hostname                                                                                                                 
+
+              padmin lsmap -npiv -all                                                                                                       
+
+                                                                                                                                                
+
+                             Verify SAN zoning and validate   1.00                                                                                             
+
+                             Verify Network VLANS on VIOS and Network Switch              1.00                                                                                             
+
+                                                                                                                                                
+
+              hscroot HMC GUI - VIO Server Properties - Virtual Ethernet Settings                             VICOM                                                                         
+
+                             Obtain access to VIOS and  NIM servers 1.00                                                                                             
+
+                             Check for rootvg disk and altdisk  availability (100GB LUNs needed)              1.00                                                                                             
+
+                             Get communication/contacts list and open service now tickets   1.00                                                                                             
+
+                             Subtotal Hours  16.00                                                                                           
+
+                                                                                                                                                
+
+                             FRAME & VIOS Upgrade Implementation Plan     Completed              VICOM                                                                         
+
+                             Frame Firmware  Upgrade                                                                                                                
+
+                             Perform firmware upgrade to the frame                                                                                                     
+
+                             Using the HMC GUI - Upgrade Firmware to latest AL720 level - no frame restart required                                                                                                                    
+
+                                                                                                                                                
+
+                                                                                                                                                
+
+                             Begin VIOS Upgrade Process                                                                                                            
+
+                             Check uptime if < 90 days; Reboot VIOS if > 90 days              1.00       VICOM                                                                         
+
+              root       #uptime                                                                                                                   
+
+              padmin $shutdown -restart -now                                                                                                                  
+
+                             Check errpt for disk or I/O errors on rootvg disks              0.25                                                                                             
+
+              root       #errpt ; errpt -a                                                                                                      
+
+                             Take mksysb of VIO server  and store on NIM server              1.25                                                                                             
+
+              root       smitty nim - Create mksysb of VIOS Server                                                                                                               
+
+                             Take profile backup and lsmap output and save it on nimserver          1.00                                                                                             
+
+              padmin $ viosbr -backup -file viosbr.tar                                                                                                       
+
+              padmin lsmap -npiv -all                                                                                                       
+
+              padmin scp /home/padmin/BACKUP_FILES  NIMServer:/export/software/hmcupd/                                                                                                        
+
+                                                                                                                                                
+
+                             Upgrade Fibre Channel Adapters             1.00       VICOM                                                                         
+
+              root       diag -d fcsX -T download                                                                                                                   
+
+                             where fcsX is the port you on which you want to install the microcode.                                                                                                             
+
+                             Self-explanatory menus will step you through the microcode installation.                                                                                                      
+
+                             Repeat this process for all of the adapters/ports.                                                                                                                  
+
+                                                                                                                                                
+
+                             Upgrade Network card Firmware             1.00       VICOM                                                                         
+
+                             1) At the VIOS CONSOLE command line type “diag”                                                                                                               
+
+                             2) Select the "Task Selection" from diagnostics menu.                                                                                                          
+
+                             3) Select "Microcode Tasks” then select “Download Microcode" from the menu.                                                                                                            
+
+                             4) Select all of the 4-Port 111 Base-TX PCI-Express Adapters (141683) that need to be updated from the list of devices by using the arrow keys to highlight the entry and pressing "Enter" to mark it.  The devices will be displayed as ent#, where # is the number of the device.  Press "F7" when you are done mark all the adapters you want to flash.                                                                                                         
+
+                             5) Select "/usr/lib/microcode" or “/etc/microcode”.                                                                                                             
+
+                             6) A dialogue box may be displayed on screen.  It will state that the current microcode level on the adapter is not in the etcmicrocode directory.  This is acceptable because the adapter will reject any incorrect code.  Press "Enter" to continue.                                                                                                                   
+
+                             7) Select CL0210 level and press "Enter" to flash the adapter.                                                                                                                  
+
+                             8) The following message will appear on the screen when download is completed: "Microcode download complete successfully.  The current microcode level for the device ent# is ...  Please run diagnostics on the adapter to ensure that it is functioning properly."                                                                                                          
+
+                             9) If you selected more than one adapter to update, then steps 6-9 will repeat until all adapters are updated.                                                                                                              
+
+                             1) Exit diagnostics.                                                                                                               
+
+                                                                                                                                                
+
+                             1) Verify the code level is CL21 by typing "lscfg -vl ent#" for each Ethernet adapter updated. <Where # is the instance of the Ethernet adapter>                                                                                                                 
+
+                                                                                                                                                
+
+                             2) ***This step is for VIOS Users only*** Re-Configure the SEA adapter by executing the following command: “cfgmgr”                                                                                                            
+
+                                                                                                                                                
+
+                             3) Re-configureVerify the adapter’s interface ip information through the “smit” menus.                                                                                                              
+
+                                                                                                                                                
+
+                             Re-Create SEA if needed by doing the following: 0.25              VICOM                                                                         
+
+              padmin $ mkvdev -sea ent11 -vadapter ent8 -default ent8 -defaultid 335 -attr ha_mode=auto ctl_chan=ent9                                                                                                                  
+
+              root       # chdev -l ent11 -a use_jumbo_frame=yes                                                                                                               
+
+              root       # chdev -l ent12 -a accounting=enabled                                                                                                      
+
+              root       # chdev -l ent12 -a large_receive=yes                                                                                                          
+
+              root       #  chdev -l ent12 -a largesend=1                                                                                                     
+
+                                                                                                                                                
+
+                             Verify I/O Traffic on Primary VIO#1 before 1st VIO Server VIO#2(Secondary Upgrade)        0.15                                                                                             
+
+              padmin lsmap -all -net     (Look for SVEA device) SVEA=ent12                                                                                                            
+
+              root       #entstat -d ent12 | egrep -i link      (Check for Link Status :  Up)                                                                                                             
+
+              root       #entstat -d ent12 | egrep -i state   (Check for State:  Primary                                                                                                     
+
+              root       #entstat -d ent12 | egrep -i trunk  (Check for Trunk Adapter:  True)                                                                                                      
+
+              root       #entstat -d ent12 | egrep -i vlan    (Check for VLAN Ids : XXX   XXX   XXX   XXX)                                                                                                      
+
+              root       #topas                                                                                                      
+
+                                                                                                                                                
+
+                             Perform Installation of 1st (Secondary-Standby) VIO Server                                                                                                                   
+
+                             Unmirror RootVG Before Cloning to single disk   0.15                                                                                             
+
+              root       #unmirror rootvg                                                                                                                  
+
+                             Create alt_clone of vios rootvg for faster back out              0.45                                                                                             
+
+              root       # alt_disk_copy -d hdisk1 -B                                                                                                             
+
+                                                                                                                                                
+
+                             Remove any eFixes intalled         0.50                                                                                             
+
+              root       # /usr/sbin/emgr -P    ( If no fix installed go to next step  if not remove the fix # /usr/sbin/emgr -r -L <EFIX label> )                                                                                                        
+
+                             Mount VIO Server Upgrade files from NIM Server                                                                                                                  
+
+              root       # mount NIM_SERVER:/export/software/vios_updates /mnt 
+
+                             Create link for padmin access to VIOS update files before local installation execution          0.10                                                                                             
+
+              root       # ln -s /usr/bin/openssl /usr/ios/utils/openssl                                                                                                         
+
+              root       # ls -al /usr/ios/utils                                                                                                             
+
+              padmin updateios -commit                                                                                                               
+
+                                                                                                                                                
+
+                             Verify VIOS Upgrade files             0.15                                                                                             
+
+              root       # ls -l /mnt/vio2221/ck_sum.bff                                                                                                     
+
+              root       # cp /mnt/vio2221/ck_sum.bff /home/padmin/                                                                                                     
+
+              root       # chmod 777 /home/padmin/ck_sum.bff                                                                                                                 
+
+              root       # exit                                                                                                         
+
+                                                                                                                                                
+
+                             Upgrade VIOS Operating System - Step 1              2.00                                                                                             
+
+              padmin $ ck_sum.bff /mnt/vio2221/                                                                                                            
+
+              padmin $ updateios -accept -install -dev /mnt/vio2221                                                                                                        
+
+              padmin $ license -accept                                                                                                                   
+
+                             Verify VIOS upgraded to target level - Step 1                                                                                                            
+
+              padmin $ ioslevel                                                                                                                 
+
+                                                                                                                                                
+
+                             Upgrade VIOS Operating System - Step 1              2.00              VICOM                                                                         
+
+              padmin $updateios -commit                                                                                                             
+
+              root       # ls -l /mnt/vios_2234/ck_sum.bff                                                                                                                
+
+              root       # cp /mnt/vios_2234/ck_sum.bff /home/padmin/                                                                                                                
+
+              root       # chmod 777 /home/padmin/ck_sum.bff                                                                                                                 
+
+              root       # exit                                                                                                         
+
+              padmin $ ck_sum.bff /mnt/vios_2234/                                                                                                        
+
+                             Execute - UPDATEIOS on VIOS 
+
+              padmin $ updateios -accept -install -dev /mnt/vios_2234                                                                                                                   
+
+              padmin $ license -accept                                                                                                                   
+
+                                                                                                                                                
+
+                             Running UPDATEIOS on VIOS as per IBM recommendation              0.3         VICOM                                                                         
+
+              padmin $ updateios -accept -install -dev /mnt/vios_2234                                                                                                                   
+
+                                                                                                                                                
+
+                             Apply VIOS Interim Fix   1.00       VICOM                                                                         
+
+              padmin $updateios -commit                                                                                                             
+
+              padmin $updateios -accept -install -dev /tmp/ifix2234                                                                                                         
+
+              padmin $lssw                                                                                                         
+
+              padmin $shutdown -restart -now                                                                                                                  
+
+              padmin $ updateios -accept -install -dev /mnt/vios_2231_33                                                                                                            
+
+                             Note : While running 'updateios' in the following steps, you may see accessauth messages, but these messages can safely be ignored.                                                                                                                   
+
+                             If your current level is between 2.2.1.1 and 2.2.2.1, you have to put the 2.2.3.1 and 2.2.3.3 updates in the same location to apply updates in one step. The one step approach fixes an update problem with the builddate on bos.alt_disk_install.boot_images fileset.                                                                                                                 
+
+                             If your current level is 2.2.2.1, 2.2.2.2, 2.2.2.3, or 2.2.3.1, you need to run updateios command twice to get bos.alt_disk_install.boot_images fileset update problem fixed. Run the following command after the step of "$ updateios -accept -install -dev <directory_name >" completes.                                                                                                      
+
+                             $ updateios -accept -dev <directory_name >                                                                                                            
+
+                                                                                                                                                
+
+                                                                                                                                                
+
+                             Verify SAN zoning and Network VLAN tagging      0.15                                                                                             
+
+                             Apply and verify all tunables (AIG/LPM settings) 0.15                                                                                             
+
+                                                                                                                                                
+
+              padmin AIX LPARs Disk Path Remediation                           AIG OPS                                                                                      
+
+              root       Re-enable paths through VIO Server by AIG Ops                                                                                                     
+
+              root                                                                                                                         
+
+              root       Verify Configuration on 1st VIO Server(Secondary) BEFORE 2nd VIO Server (Primary) Upgrade           0.15       VICOM                                                                          
+
+              root       lsmap -all -net     (Look for SVEA device) SVEA=ent12                                                                                                            
+
+              root       #entstat -d ent12 | egrep -i link      (Check for Link Status :  Up)                                                                                                             
+
+              root       #entstat -d ent12 | egrep -i state   (Check for State:  BACKUP)                                                                                                                  
+
+                             #entstat -d ent12 | egrep -i trunk  (Check for Trunk Adapter:  True)                                                                                                      
+
+                             #entstat -d ent12 | egrep -i vlan    (Check for VLAN Ids : XXX   XXX   XXX   XXX)                                                                                                      
+
+                             entstat -d ent12 | egrep -i priority      (Check for Priority:  2)                                                                                                                   
+
+                             #topas                                                                                                      
+
+              root                                                                                                                         
+
+              root                                                                                                                         
+
+                             Perform Installation of 2nd (Primary) VIO#1 Server                        VICOM                                                                         
+
+                             Switch Network Traffic from primary VIO#1 to secondary VIO#2   0.15                                                                                             
+
+                             # chdev -l ent12 -a hamode=standby                                                                                                           
+
+                             # entstat -d ent12 | egrep -i state   (Check for State: Backup)                                                                                                     
+
+              padmin                                                                                                                   
+
+              root       Repeat above Installation Tasks for the 2nd (Primary) VIO#1 server   (Line 49 - 156)      13.15    VICOM                                                                          
+
+              root                                                                                                                         
+
+              root       Verify Configuration on Primary VIO Server AFTER 2nd VIO Server Upgrade 0.15       VICOM                                                                         
+
+              root       lsmap -all -net     (Look for SVEA device) SVEA=ent12                                                                                                            
+
+              root       #entstat -d ent12 | egrep -i link      (Check for Link Status :  Up)                                                                                                             
+
+              root       #entstat -d ent12 | egrep -i state   (Check for State:  BACKUP)                                                                                                                  
+
+                             #entstat -d ent12 | egrep -i trunk  (Check for Trunk Adapter:  True)                                                                                                      
+
+                             #entstat -d ent12 | egrep -i vlan    (Check for VLAN Ids : XXX   XXX   XXX   XXX)                                                                                                      
+
+              root       entstat -d ent12 | egrep -i priority      (Check for Priority:  1)                                                                                                                   
+
+                             #topas                                                                                                      
+
+              padmin                                                                                                                   
+
+              root       Switch Network Traffic back from VIO#2 to VIO#1              0.15                                                                                             
+
+              root       #chdev -l ent12 -a hamode=standby                                                                                                            
+
+              root                                                                                                                         
+
+              root       lsmap -all -net     (Look for SVEA device) SVEA=ent12              0.15                                                                                             
+
+              root       #entstat -d ent12 | egrep -i link      (Check for Link Status :  Up)                                                                                                             
+
+                             #entstat -d ent12 | egrep -i state   (Check for State:  Primary                                                                                                     
+
+                             #entstat -d ent12 | egrep -i trunk  (Check for Trunk Adapter:  True)                                                                                                      
+
+              padmin #entstat -d ent12 | egrep -i vlan    (Check for VLAN Ids : XXX   XXX   XXX   XXX)                                                                                                      
+
+              padmin #topas                                                                                                      
+
+                                                                                                                                                
+
+              root       Check lsmap and disk mapping, lsnport all are consitant to original state     1.00       VICOM                                                                         
+
+              root       $ lsmap -all -npiv                                                                                                                 
+
+              root       $ lsnports                                                                                                                
+
+                             Install BladeLogic Agent (Installation Only)           1.00                                                                                             
+
+                             Update  /etc/rsc/users.local file                                                                                                      
+
+                             "AIGGS_Unix_Engineering:* rw,map=root - Append to EOF
+
+AIGGS_Unix_Operations:* rw,map=root   - Appent to EOF"                                                                                                               
+
+                             Verify backup scripts      0.15                                                                                              
+
+                             Run standard tests before hand off to AIG            0.15                                                                                             
+
+                                                                                                                                                
+
+              root       Subtotal hours: 29.20                                                                                           
+
+              root                                                                                                                         
+
+                             Backout plan                    VICOM                                                                          
+
+                             Reboot  each VIO server and boot from the original rootvg LUN       2.00                                                                                             
+
+                             #bootlist -m normal hdisk0 hdisk1                                                                                                                
+
+                             #shutdown -rF                                                                                                        
+
+                                                                                                                                                
+
+                             Check and verify original configuration   1.00                                                                                             
+
+              root       Subtotal hours: 3.00                                                                                             
+
+              root                                                                                                                         
+
+              root       Post-Installation Tasks                                                                                                         
+
+              root       Re-mirror rootvg disk, clean up directories on both VIO Servers 0.40                                                                                             
+
+              root       # alt_rootvg_op -X old_rootvg                                                                                                         
+
+              root       # lspv                                                                                                        
+
+              root       # extendvg -f rootvg hdisk#   use the free disk                                                                                                         
+
+              root       # lspv                                                                                                        
+
+                             # mirrorvg -S rootvg hdisk#                                                                                                              
+
+                             # bosboot -a                                                                                                           
+
+                             #bootlist -m normal hdisk0 hdisk1                                                                                                                
+
+                             #bootlist -m normal -o                                                                                                        
+
+                                                                                                                                                
+
+                             Total Hours needed for Window:             33.00                                                                                           
+
+                             Total Hours Prep and Change Window time:        49.00                                                                                          
+
+                                                                                                                                                
+
+ 
+
+ 
+
+ 
+
+ 
+
+x) vio2
+
+ 
+
+ent13     Defined   05-01 PCIe2 10GbE SFP+ SR 4-port Converged Network Adapter (df1020e214100f04)
+
+ 
+
+x) 4-port adapter
+
+root@vio2(/)# lscfg | grep -i  U78CD.001.FZH7724-P2-C1
+
++ ent12            U78CD.001.FZH7724-P2-C1-T1                 PCIe2 10GbE SFP+ SR 4-port Converged Network Adapter (df1020e                       214100f04)
+
++ ent13            U78CD.001.FZH7724-P2-C1-T2                 PCIe2 10GbE SFP+ SR 4-port Converged Network Adapter (df1020e                       214100f04)
+
++ ent14            U78CD.001.FZH7724-P2-C1-T3                 PCIe2 100/1000 Base-TX 4-port Converged Network Adapter (df10                       20e214103c04)
+
++ ent15            U78CD.001.FZH7724-P2-C1-T4                 PCIe2 100/1000 Base-TX 4-port Converged Network Adapter (df10                       20e214103c04)
+
++ fcs18            U78CD.001.FZH7724-P2-C1-T1                 PCIe2 10Gb 4-Port FCoE Adapter (df1060e214101004)
+
+* fscsi18          U78CD.001.FZH7724-P2-C1-T1                 FC SCSI I/O Controller Protocol Device
+
+* sfwcomm18        U78CD.001.FZH7724-P2-C1-T1-W0-L0           Fibre Channel Storage Framework Comm
+
++ fcs19            U78CD.001.FZH7724-P2-C1-T2                 PCIe2 10Gb 4-Port FCoE Adapter (df1060e214101004)
+
+* fscsi19          U78CD.001.FZH7724-P2-C1-T2                 FC SCSI I/O Controller Protocol Device
+
+* sfwcomm19        U78CD.001.FZH7724-P2-C1-T2
+
+------------------------------------------------------------------------------------------------------------------
+
+ 
+
+x) Adapter info
+
+ 
+
+root@vio2(/)# lscfg -vpl ent12
+
+  ent12            U78CD.001.FZH7724-P2-C1-T1  PCIe2 10GbE SFP+ SR 4-port Converged Network Adapter (df1020e214100f04)
+
+ 
+
+      PCIe2 4-port (2 10GbE+2 1GbE) FCoE+NIC SRIOV Adapter, NIC PF:
+
+        Part Number.................00E3497
+
+        Serial Number...............1A54400240
+
+        EC Level....................D77535
+
+        Customer Card ID Number.....2B93
+
+        Network Address.............0090FAB91E9C
+
+        ROM Level.(alterable).......10.2.252.1927
+
+        Hardware Location Code......U78CD.001.FZH7724-P2-C1-T1
+
+ 
+
+ 
+
+  PLATFORM SPECIFIC
+
+ 
+
+  Name:  ethernet
+
+    Node:  ethernet@0
+
+    Device Type:  network
+
+    Physical Location: U78CD.001.FZH7724-P2-C1-T1
+
+ 
+
+---------------------------------------------------------------------------------------------------------------------
+
+root@vio2(/)# lscfg -vpl ent13
+
+  ent13            U78CD.001.FZH7724-P2-C1-T2  PCIe2 10GbE SFP+ SR 4-port Converged Network Adapter (df1020e214100f04)
+
+ 
+
+        Hardware Location Code......U78CD.001.FZH7724-P2-C1-T2
+
+ 
+
+ 
+
+  PLATFORM SPECIFIC
+
+ 
+
+  Name:  ethernet
+
+    Node:  ethernet@0,1
+
+    Device Type:  network
+
+    Physical Location: U78CD.001.FZH7724-P2-C1-T2
+
+root@vio2(/)#
+
+ 
+
+-------------------------------------------------------------------------------------------
+
+root@vio2(/)# ifconfig -a
+
+en9: flags=1e084863,19c0<UP,BROADCAST,NOTRAILERS,RUNNING,SIMPLEX,MULTICAST,GROUPRT,64BIT,CHECKSUM_OFFLOAD(ACTIVE),LARGESEND,CHAIN>
+
+        inet 10.97.8.62 netmask 0xffffff80 broadcast 10.97.8.127
+
+         tcp_sendspace 262144 tcp_recvspace 262144 rfc1323 1
+
+en28: flags=1e084863,401c0<UP,BROADCAST,NOTRAILERS,RUNNING,SIMPLEX,MULTICAST,GROUPRT,64BIT,CHECKSUM_OFFLOAD(ACTIVE),LARGESEND,CHAIN>
+
+        inet 10.97.67.85 netmask 0xffffff00 broadcast 10.97.67.255
+
+         tcp_sendspace 262144 tcp_recvspace 262144 rfc1323 1
+
+lo0: flags=e08084b,1c0<UP,BROADCAST,LOOPBACK,RUNNING,SIMPLEX,MULTICAST,GROUPRT,64BIT,LARGESEND,CHAIN>
+
+        inet 127.0.0.1 netmask 0xff000000 broadcast 127.255.255.255
+
+        inet6 ::1%1/0
+
+         tcp_sendspace 131072 tcp_recvspace 131072 rfc1323 1
+
+ 
+
+ 
+
+root@vio2(/)# lsattr -El ent28
+
+base_adapter  ent26 VLAN Base Adapter True
+
+vlan_priority 0     VLAN Priority     True
+
+vlan_tag_id   335   VLAN Tag ID       True
+
+root@vio2(/)#
+
+ 
+
+console:
+
+ifconfig en28 down detach delete
+
+ 
+
+-----------------------------------------------------------------------------------------------------------------------
+
+Dynamically remove/ add Ethernet Physical adapter
+
+------------------
+
+ 
+
+1. Take information of ethernet attributes
+
+ 
+
+        lsattr -El ent<physical NIC>    
+
+        lsattr -El ent<etherchannel>
+
+        lsattr -El ent<SEA>
+
+ 
+
+-----------------------------------------------------------------------------------------
+
+ent25          Available             EtherChannel / IEEE 802.3ad Link Aggregation
+
+ent27          Available             Shared Ethernet Adapter
+
+--------------------------------------------------------------------------------------------
+
+ 
+
+root@vio2(/)# lsattr -El ent25
+
+adapter_names   ent8,ent12     EtherChannel Adapters                           True
+
+alt_addr        0x000000000000 Alternate EtherChannel Address                  True
+
+auto_recovery   yes            Enable automatic recovery after failover        True
+
+backup_adapter  NONE           Adapter used when whole channel fails           True
+
+hash_mode       src_dst_port   Determines how outgoing adapter is chosen       True
+
+interval        long           Determines interval value for IEEE 802.3ad mode True
+
+mode            8023ad         EtherChannel mode of operation                  True
+
+netaddr         0              Address to ping                                 True
+
+noloss_failover yes            Enable lossless failover after ping failure     True
+
+num_retries     3              Times to retry ping before failing              True
+
+retry_time      1              Wait time (in seconds) between pings            True
+
+use_alt_addr    no             Enable Alternate EtherChannel Address           True
+
+use_jumbo_frame yes            Enable Gigabit Ethernet Jumbo Frames            True
+
+root@vio2(/)#
+
+ 
+
+------------------------------------------------------------------------------------------------------------------
+
+ 
+
+root@vio2(/)# lsattr -El ent27
+
+accounting      enabled     Enable per-client accounting of network statistics                                 True
+
+adapter_reset   no          Reset real adapter on HA takeover                                                  True
+
+ctl_chan                    Control Channel adapter for SEA failover                                           True
+
+fb_delay        30          Delay before failback occurs (seconds)                                             True
+
+gvrp            no          Enable GARP VLAN Registration Protocol (GVRP)                                      True
+
+ha_mode         sharing     High Availability Mode                                                             True
+
+hash_algo       0           Hash algorithm used to select a SEA thread                                         True
+
+health_time     600         Time in seconds required until the SEA is deemed healthy                           True
+
+jumbo_frames    yes         Enable Gigabit Ethernet Jumbo Frames                                               True
+
+large_receive   yes         Enable receive TCP segment aggregation                                             True
+
+largesend       1           Enable Hardware Transmit TCP Resegmentation                                        True
+
+link_time       60          Time in seconds required for the link to be declared healthy after a status change True
+
+lldpsvc         no          Enable IEEE 802.1qbg services                                                      True
+
+netaddr         0           Address to ping                                                                    True
+
+noauto_failback disabled    Disable auto failback                                                              True
+
+nthreads        7           Number of SEA threads in Thread mode                                               True
+
+pvid            7           PVID to use for the SEA device                                                     True
+
+pvid_adapter    ent22       Default virtual adapter to use for non-VLAN-tagged packets                         True
+
+qos_mode        disabled    N/A                                                                                True
+
+queue_size      8192        Queue size for a SEA thread                                                        True
+
+real_adapter    ent25       Physical adapter associated with the SEA                                           True
+
+send_RARP       yes         Transmit Reverse ARP after HA takeover                                             True
+
+thread          1           Thread mode enabled (1) or disabled (0)                                            True
+
+virt_adapters   ent22,ent23 List of virtual adapters associated with the SEA (comma separated)                 True
+
+ 
+
+-----------------------------------------------------------------------------------------------------------------------
+
+ 
+
+root@vio2(/)# lsattr -El ent12
+
+alt_addr        0x000000000000    Alternate Ethernet address                          True
+
+bar0            0xa0328000        Bus memory address 0                                False
+
+busintr         22560             Bus interrupt level                                 False
+
+chksum_offload  yes               Request checksum offload                            True
+
+cksum_ip        yes               Request IP checksum offload                         True
+
+cksum_rx        yes               Request Rx checksum offload                         True
+
+cksum_tcp       yes               Request TCP checksum offload                        True
+
+cksum_udp       yes               Request UDP checksum offload                        True
+
+delay_open      no                Delay open until link state is known                True
+
+flow_ctrl       yes               Request flow control                                True
+
+flow_ctrl_rx    yes               Receive pause frames                                True
+
+flow_ctrl_tx    yes               Transmit pause frames                               True
+
+intr_priority   3                 Interrupt priority                                  False
+
+intr_time       50                Interrupt event coalesce timer (microseconds)       True
+
+ipv6_offload    yes               Request IPV6 stateless offloads                     True
+
+jumbo_frames    yes               Request jumbo frames                                True
+
+jumbo_size      9014              Requested jumbo frame size                          True
+
+large_receive   yes               Request Rx TCP segment aggregation                  True
+
+large_send      yes               Request Tx TCP segment offload                      True
+
+
+...
+
+[Message clipped]  View entire message
+Displaying VIO Upgrade.zip.
